@@ -115,6 +115,7 @@ export class Viewer extends EventDispatcher{
 		this.filterReturnNumberRange = [0, 7];
 		this.filterNumberOfReturnsRange = [0, 7];
 		this.filterGPSTimeRange = [-Infinity, Infinity];
+		this.filterPointSourceIDRange = [0, 65535];
 
 		this.potreeRenderer = null;
 		this.edlRenderer = null;
@@ -662,6 +663,11 @@ export class Viewer extends EventDispatcher{
 		this.dispatchEvent({'type': 'filter_gps_time_range_changed', 'viewer': this});
 	}
 
+	setFilterPointSourceIDRange(from, to){
+		this.filterPointSourceIDRange = [from, to]
+		this.dispatchEvent({'type': 'filter_point_source_id_range_changed', 'viewer': this});
+	}
+
 	setLengthUnit (value) {
 		switch (value) {
 			case 'm':
@@ -926,7 +932,7 @@ export class Viewer extends EventDispatcher{
 			Potree.loadProject(viewer, json);
 		}
 
-		Potree.loadProject(this, url);
+		//Potree.loadProject(this, url);
 	}
 
 	saveProject(){
@@ -1036,13 +1042,6 @@ export class Viewer extends EventDispatcher{
 			this.fpControls.enabled = false;
 			this.fpControls.addEventListener('start', this.disableAnnotations.bind(this));
 			this.fpControls.addEventListener('end', this.enableAnnotations.bind(this));
-			// this.fpControls.addEventListener("double_click_move", (event) => {
-			//	let distance = event.targetLocation.distanceTo(event.position);
-			//	this.setMoveSpeed(Math.pow(distance, 0.4));
-			// });
-			// this.fpControls.addEventListener("move_speed_changed", (event) => {
-			//	this.setMoveSpeed(this.fpControls.moveSpeed);
-			// });
 		}
 
 		// { // create GEO CONTROLS
@@ -1105,9 +1104,23 @@ export class Viewer extends EventDispatcher{
 		}
 	}
 
+	promiseGuiLoaded(){
+		return new Promise( resolve => {
+
+			if(this.guiLoaded){
+				resolve();
+			}else{
+				this.guiLoadTasks.push(resolve);
+			}
+		
+		});
+	}
+
 	loadGUI(callback){
 
-		this.onGUILoaded(callback);
+		if(callback){
+			this.onGUILoaded(callback);
+		}
 
 		let viewer = this;
 		let sidebarContainer = $('#potree_sidebar_container');
@@ -1135,7 +1148,7 @@ export class Viewer extends EventDispatcher{
 			i18n.init({
 				lng: 'en',
 				resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
-				preload: ['en', 'fr', 'de', 'jp', 'se'],
+				preload: ['en', 'fr', 'de', 'jp', 'se', 'es'],
 				getAsync: true,
 				debug: false
 			}, function (t) {
@@ -1183,6 +1196,8 @@ export class Viewer extends EventDispatcher{
 
 			
 		});
+
+		return this.promiseGuiLoaded();
 	}
 
 	setLanguage (lang) {
@@ -1200,7 +1215,7 @@ export class Viewer extends EventDispatcher{
 			e.preventDefault();
 		}
 
-		async function dropHandler(event){
+		let dropHandler = async (event) => {
 			console.log(event);
 			event.preventDefault();
 
@@ -1255,8 +1270,9 @@ export class Viewer extends EventDispatcher{
 				}
 				
 			}
-			
-		}
+		};
+
+
 		$("body")[0].addEventListener("dragenter", allowDrag);
 		$("body")[0].addEventListener("dragover", allowDrag);
 		$("body")[0].addEventListener("drop", dropHandler);
@@ -1309,10 +1325,12 @@ export class Viewer extends EventDispatcher{
 		});
 		//this.renderer.domElement.focus();
 
+		// NOTE: If extension errors occur, pass the string into this.renderer.extensions.get(x) before enabling
 		// enable frag_depth extension for the interpolation shader, if available
 		let gl = this.renderer.getContext();
 		gl.getExtension('EXT_frag_depth');
 		gl.getExtension('WEBGL_depth_texture');
+		gl.getExtension('WEBGL_color_buffer_float'); 	// Enable explicitly for more portability, EXT_color_buffer_float is the proper name in WebGL 2
 		
 		//if(gl instanceof WebGLRenderingContext){
 			let extVAO = gl.getExtension('OES_vertex_array_object');
@@ -1504,10 +1522,20 @@ export class Viewer extends EventDispatcher{
 
 		const material = pointcloud.material;
 
-		const attIntensity = pointcloud.getAttribute("intensity");
-		if(attIntensity && material.intensityRange[0] === Infinity){
-			material.intensityRange = [...attIntensity.range];
-		}
+		// const attIntensity = pointcloud.getAttribute("intensity");
+		// if(attIntensity && material.intensityRange[0] === Infinity){
+		// 	material.intensityRange = [...attIntensity.range];
+		// }
+
+		// let attributes = pointcloud.getAttributes();
+
+		// for(let attribute of attributes.attributes){
+		// 	if(attribute.range){
+		// 		let range = [...attribute.range];
+		// 		material.computedRange.set(attribute.name, range);
+		// 		//material.setRange(attribute.name, range);
+		// 	}
+		// }
 
 
 	}
@@ -1539,6 +1567,7 @@ export class Viewer extends EventDispatcher{
 			material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
 			material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
 			material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
+			material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
 
 			material.classification = this.classifications;
 			material.recomputeClassification();
@@ -1731,10 +1760,15 @@ export class Viewer extends EventDispatcher{
 				boxes.push(...profile.boxes);
 			}
 			
-			let clipBoxes = boxes.map( box => {
+			// Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
+			let degenerate = (box) => box.matrixWorld.determinant() !== 0;
+			
+			let clipBoxes = boxes.filter(degenerate).map( box => {
 				box.updateMatrixWorld();
+				
 				let boxInverse = new THREE.Matrix4().getInverse(box.matrixWorld);
 				let boxPosition = box.getWorldPosition(new THREE.Vector3());
+
 				return {box: box, inverse: boxInverse, position: boxPosition};
 			});
 

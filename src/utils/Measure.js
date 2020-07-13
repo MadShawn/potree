@@ -262,15 +262,15 @@ function createAzimuth(){
 
 	azimuth.node = new THREE.Object3D();
 	azimuth.node.add(
-		azimuth.label,
-		azimuth.center,
-		azimuth.target,
-		azimuth.north,
 		azimuth.centerToNorth,
 		azimuth.centerToTarget,
 		azimuth.centerToTargetground,
 		azimuth.targetgroundToTarget,
 		azimuth.circle,
+		azimuth.label,
+		azimuth.center,
+		azimuth.target,
+		azimuth.north,
 	);
 
 	return azimuth;
@@ -473,6 +473,9 @@ export class Measure extends THREE.Object3D {
 		this.remove(this.edgeLabels[edgeIndex]);
 		this.edgeLabels.splice(edgeIndex, 1);
 		this.coordinateLabels.splice(index, 1);
+
+		this.remove(this.angleLabels[index]);
+		this.angleLabels.splice(index, 1);
 
 		this.spheres.splice(index, 1);
 

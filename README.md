@@ -1,9 +1,7 @@
 
 # About
 
-Potree is a free open-source WebGL based point cloud renderer for large point clouds.
-It is based on the [TU Wien Scanopy project](https://www.cg.tuwien.ac.at/research/projects/Scanopy/)
-and it was part of the [Harvest4D Project](https://harvest4d.org/).
+Potree is a free open-source WebGL based point cloud renderer for large point clouds. It is based on the [TU Wien Scanopy project](https://www.cg.tuwien.ac.at/research/projects/Scanopy/) and research projects [Harvest4D](https://harvest4d.org/), [GCD Doctoral College](https://gcd.tuwien.ac.at/) and [Superhumans](https://www.cg.tuwien.ac.at/research/projects/Superhumans/).
 
 
 <a href="http://potree.org/wp/demo/" target="_blank"> ![](./docs/images/potree_screens.png) </a>
@@ -18,25 +16,21 @@ Reference: [Potree: Rendering Large Point Clouds in Web Browsers](https://www.cg
 
 ### Build and Run
 
-Make sure you have [node.js](http://nodejs.org/) installed
+Install [node.js](http://nodejs.org/)
 
-Install all dependencies, as specified in package.json, 
-then, install the gulp build tool:
+Install all dependencies, as specified in package.json: 
 
-    cd <potree_directory>
-    npm install
-    npm install -g gulp
-    npm install -g rollup
+```bash
+npm install
+```
 
-Use the ```gulp watch``` command to 
+Use `npm run build` to create ./build/potree.
+
+Use the `npm start` command to 
 
 * create ./build/potree 
 * watch for changes to the source code and automatically create a new build on change
 * start a web server at localhost:1234. 
-
-```
-gulp watch
-```
 
 Go to http://localhost:1234/examples/ to test the examples.
 
@@ -50,13 +44,11 @@ Copy the converted directory into &lt;potreeDirectory&gt;/pointclouds/data_conve
 
 # Downloads
 
-[PotreeConverter source and Win64 binaries](https://github.com/potree/PotreeConverter/releases)
+* [Potree](https://github.com/potree/potree/releases)
+* [PotreeConverter ](https://github.com/potree/PotreeConverter/releases) - Convert your point cloud to the Potree format.
+* [PotreeDesktop ](https://github.com/potree/PotreeDesktop/releases) - Desktop version of Potree. Allows drag&drop of point clouds into the viewer.
 
 # Examples
-
-Take a look at the [potree showcase](http://potree.org/wp/demo/) for more examples.
-
-
 
 <table>
 	<tr>
@@ -228,7 +220,28 @@ Take a look at the [potree showcase](http://potree.org/wp/demo/) for more exampl
 	</tr>
 </table>
 
-# Donations
+# Funding
+
+Potree is funded by a combination of research projects, companies and institutions. 
+
+<table>
+	<tr>
+		<th>Project Name</th>
+		<th>Funding Agency</th>
+	</tr>
+	<tr>
+		<td><a href="https://harvest4d.org/">Harvest4D</a></td>
+		<td><a href="https://ec.europa.eu/transport/themes/research/fp7_en">EU 7th Framework Program 323567</a></td>
+	</tr>
+	<tr>
+		<td><a href="https://gcd.tuwien.ac.at/">GCD Doctoral College</a></td>
+		<td><a href="https://www.tuwien.at/en/">TU Wien</a></td>
+	</tr>
+	<tr>
+		<td><a href="https://www.cg.tuwien.ac.at/research/projects/Superhumans/">Superhumans</a></td>
+		<td><a href="https://www.fwf.ac.at/">FWF</a></td>
+	</tr>
+</table>
 
 We would like to thank our sponsors for their financial contributions that keep this project up and running!
 
@@ -285,7 +298,7 @@ We would like to thank our sponsors for their financial contributions that keep 
 				<img src="docs/sponsors/helimap.gif" height="60"/> &nbsp;
 			</a>
 			<a href="http://www.vevey.ch/">
-				<img src="docs/sponsors/vevey.png" height="70"/> &nbsp;
+				<img src="docs/sponsors/vevey.png" height="60"/> &nbsp;
 			</a>
 			<a href="https://www.yverdon-les-bains.ch/">
 				<img src="docs/sponsors/Logo-YLB.png" height="60"/> &nbsp;

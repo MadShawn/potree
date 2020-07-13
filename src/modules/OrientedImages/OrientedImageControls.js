@@ -23,7 +23,7 @@ export class OrientedImageControls extends EventDispatcher{
 		this.fadeFactor = 20;
 		this.fovDelta = 0;
 
-		this.fovMin = 5;
+		this.fovMin = 0.1;
 		this.fovMax = 120;
 
 		this.shear = [0, 0];
@@ -124,9 +124,9 @@ export class OrientedImageControls extends EventDispatcher{
 	}
 
 	update (delta) {
-		const view = this.scene.view;
+		// const view = this.scene.view;
 
-		let prevTotal = this.shearCam.projectionMatrix.elements.reduce( (a, i) => a + i, 0);
+		// let prevTotal = this.shearCam.projectionMatrix.elements.reduce( (a, i) => a + i, 0);
 
 		//const progression = Math.min(1, this.fadeFactor * delta);
 		//const attenuation = Math.max(0, 1 - this.fadeFactor * delta);

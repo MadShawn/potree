@@ -49,6 +49,8 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		this._useEDL = false;
 		this.defines = new Map();
 
+		this.ranges = new Map();
+
 		this._activeAttributeName = null;
 
 		this._defaultIntensityRangeChanged = false;
@@ -136,12 +138,15 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 			clipMethod:			{ type: "i", value: 1 },
 			uShadowColor:		{ type: "3fv", value: [0, 0, 0] },
 
+			uExtraScale:		{ type: "f", value: 1},
+			uExtraOffset:		{ type: "f", value: 0},
 			uExtraRange:		{ type: "2fv", value: [0, 1] },
 			uExtraGammaBrightContr:	{ type: "3fv", value: [1, 0, 0] },
 
 			uFilterReturnNumberRange:		{ type: "fv", value: [0, 7]},
 			uFilterNumberOfReturnsRange:	{ type: "fv", value: [0, 7]},
 			uFilterGPSTimeClipRange:		{ type: "fv", value: [0, 7]},
+			uFilterPointSourceIDClipRange:		{ type: "fv", value: [0, 65535]},
 			matcapTextureUniform: 	{ type: "t", value: this.matcapTexture },
 			backfaceCulling: { type: "b", value: false },
 		};
@@ -673,6 +678,25 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		}
 	}
 
+	get minSize(){
+		return this.uniforms.minSize.value;
+	}
+
+	set minSize(value){
+		if (this.uniforms.minSize.value !== value) {
+			this.uniforms.minSize.value = value;
+
+			this.dispatchEvent({
+				type: 'point_size_changed',
+				target: this
+			});
+			this.dispatchEvent({
+				type: 'material_property_changed',
+				target: this
+			});
+		}
+	}
+
 	get elevationRange () {
 		return this.uniforms.elevationRange.value;
 	}
@@ -868,6 +892,32 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		}
 	}
 
+	getRange(attributeName){
+		return this.ranges.get(attributeName);
+	}
+
+	setRange(attributeName, newRange){
+
+		let rangeChanged = false;
+
+		let oldRange = this.ranges.get(attributeName);
+
+		if(oldRange != null && newRange != null){
+			rangeChanged = oldRange[0] !== newRange[0] || oldRange[1] !== newRange[1];
+		}else{
+			rangeChanged = true;
+		}
+
+		this.ranges.set(attributeName, newRange);
+
+		if(rangeChanged){
+			this.dispatchEvent({
+				type: 'material_property_changed',
+				target: this
+			});
+		}
+	}
+
 	get extraRange () {
 		return this.uniforms.uExtraRange.value;
 	}
@@ -1046,12 +1096,17 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		this._hiddenListeners = undefined;
 	};
 
-	copyFrom(from){
+	// copyFrom(from){
 
-		for(let name of this.uniforms){
-			this.uniforms[name].value = from.uniforms[name].value;
-		}
+	// 	var a = 10;
 
-	}
+	// 	for(let name of Object.keys(this.uniforms)){
+	// 		this.uniforms[name].value = from.uniforms[name].value;
+	// 	}
+	// }
+
+	// copy(from){
+	// 	this.copyFrom(from);
+	// }
 
 }

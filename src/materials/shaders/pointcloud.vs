@@ -82,6 +82,7 @@ uniform vec2 intensityRange;
 
 uniform vec2 uFilterReturnNumberRange;
 uniform vec2 uFilterNumberOfReturnsRange;
+uniform vec2 uFilterPointSourceIDClipRange;
 uniform vec2 uFilterGPSTimeClipRange;
 uniform float uGpsScale;
 uniform float uGpsOffset;
@@ -102,6 +103,8 @@ uniform float wSourceID;
 
 uniform vec2 uExtraNormalizedRange;
 uniform vec2 uExtraRange;
+uniform float uExtraScale;
+uniform float uExtraOffset;
 
 uniform vec3 uShadowColor;
 
@@ -146,7 +149,7 @@ float round(float number){
 // OCTREE
 // ---------------------
 
-#if (defined(adaptive_point_size) || defined(color_type_lod)) && defined(tree_type_octree)
+#if (defined(adaptive_point_size) || defined(color_type_level_of_detail)) && defined(tree_type_octree)
 /**
  * number of 1-bits up to inclusive index position
  * number is treated as if it were an integer in the range 0-255
@@ -304,7 +307,7 @@ float getPointSizeAttenuation(){
 // KD-TREE
 // ---------------------
 
-#if (defined(adaptive_point_size) || defined(color_type_lod)) && defined(tree_type_kdtree)
+#if (defined(adaptive_point_size) || defined(color_type_level_of_detail)) && defined(tree_type_kdtree)
 
 float getLOD(){
 	vec3 offset = vec3(0.0, 0.0, 0.0);
@@ -410,13 +413,17 @@ float getIntensity(){
 }
 
 vec3 getGpsTime(){
-	vec2 r = uNormalizedGpsBufferRange;
 
-	float w = gpsTime * (r.y - r.x) + r.x;
+	float w = (gpsTime + uGpsOffset) * uGpsScale;
 
-	w = clamp(w, 0.0, 1.0);
 
-	vec3 c = texture2D(gradient, vec2(w,1.0-w)).rgb;
+	vec3 c = texture2D(gradient, vec2(w, 1.0 - w)).rgb;
+
+
+	// vec2 r = uNormalizedGpsBufferRange;
+	// float w = gpsTime * (r.y - r.x) + r.x;
+	// w = clamp(w, 0.0, 1.0);
+	// vec3 c = texture2D(gradient, vec2(w,1.0-w)).rgb;
 	
 	return c;
 }
@@ -434,6 +441,46 @@ vec4 getClassification(){
 	vec4 classColor = texture2D(classificationLUT, uv);
 	
 	return classColor;
+}
+
+vec3 getReturns(){
+
+	// 0b 00_000_111
+	float rn = mod(returnNumber, 8.0);
+	// 0b 00_111_000
+	float nr = mod(returnNumber / 8.0, 8.0);
+
+	if(nr <= 1.0){
+		return vec3(1.0, 0.0, 0.0);
+	}else{
+		return vec3(0.0, 1.0, 0.0);
+	}
+
+	// return vec3(nr / 4.0, 0.0, 0.0);
+
+	// if(nr == 1.0){
+	// 	return vec3(1.0, 1.0, 0.0);
+	// }else{
+	// 	if(rn == 1.0){
+	// 		return vec3(1.0, 0.0, 0.0);
+	// 	}else if(rn == nr){
+	// 		return vec3(0.0, 0.0, 1.0);
+	// 	}else{
+	// 		return vec3(0.0, 1.0, 0.0);
+	// 	}
+	// }
+
+	// if(numberOfReturns == 1.0){
+	// 	return vec3(1.0, 1.0, 0.0);
+	// }else{
+	// 	if(returnNumber == 1.0){
+	// 		return vec3(1.0, 0.0, 0.0);
+	// 	}else if(returnNumber == numberOfReturns){
+	// 		return vec3(0.0, 0.0, 1.0);
+	// 	}else{
+	// 		return vec3(0.0, 1.0, 0.0);
+	// 	}
+	// }
 }
 
 vec3 getReturnNumber(){
@@ -531,15 +578,21 @@ vec3 getMatcap(){
 #endif
 
 vec3 getExtra(){
-	vec2 r = uExtraNormalizedRange;
 
-	float w = aExtra * (r.y - r.x) + r.x;
-
-	w = (w - uExtraRange.x) / (uExtraRange.y - uExtraRange.x);
-
+	float w = (aExtra + uExtraOffset) * uExtraScale;
 	w = clamp(w, 0.0, 1.0);
 
 	vec3 color = texture2D(gradient, vec2(w,1.0-w)).rgb;
+
+	// vec2 r = uExtraNormalizedRange;
+
+	// float w = aExtra * (r.y - r.x) + r.x;
+
+	// w = (w - uExtraRange.x) / (uExtraRange.y - uExtraRange.x);
+
+	// w = clamp(w, 0.0, 1.0);
+
+	// vec3 color = texture2D(gradient, vec2(w,1.0-w)).rgb;
 
 	return color;
 }
@@ -547,7 +600,7 @@ vec3 getExtra(){
 vec3 getColor(){
 	vec3 color;
 	
-	#ifdef color_type_RGBA
+	#ifdef color_type_rgba
 		color = getRGB();
 	#elif defined color_type_height || defined color_type_elevation
 		color = getElevation();
@@ -580,9 +633,13 @@ vec3 getColor(){
 		color = cl.rgb;
 	#elif defined color_type_return_number
 		color = getReturnNumber();
+	#elif defined color_type_returns
+		color = getReturns();
 	#elif defined color_type_number_of_returns
 		color = getNumberOfReturns();
 	#elif defined color_type_source_id
+		color = getSourceID();
+	#elif defined color_type_point_source_id
 		color = getSourceID();
 	#elif defined color_type_normal
 		color = (modelMatrix * vec4(normal, 0.0)).xyz;
@@ -630,6 +687,10 @@ float getPointSize(){
 				pointSize = size * spacing * projFactor;
 			}else{
 				float worldSpaceSize = 1.0 * size * r / getPointSizeAttenuation();
+
+				// minimum world space size
+				// worldSpaceSize = max(worldSpaceSize, 0.02);
+
 				pointSize = worldSpaceSize * projFactor;
 			}
 		}
@@ -718,11 +779,21 @@ void doClipping(){
 
 	#if defined(clip_gps_enabled)
 	{ // GPS time filter
-		//float time = gpsTime + uGPSOffset;
-		float time = gpsTime / uGpsScale + uGpsOffset;
+		float time = (gpsTime + uGpsOffset) * uGpsScale;
 		vec2 range = uFilterGPSTimeClipRange;
 
 		if(time < range.x || time > range.y){
+			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
+			
+			return;
+		}
+	}
+	#endif
+
+	#if defined(clip_point_source_id_enabled)
+	{ // point source id filter
+		vec2 range = uFilterPointSourceIDClipRange;
+		if(pointSourceID < range.x || pointSourceID > range.y){
 			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
 			
 			return;
@@ -789,7 +860,7 @@ void doClipping(){
 //
 
 void main() {
-	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+	vec4 mvPosition = modelViewMatrix * vec4(position, 1.0 );
 	vViewPosition = mvPosition.xyz;
 	gl_Position = projectionMatrix * mvPosition;
 	vLogDepth = log2(-mvPosition.z);
@@ -801,6 +872,17 @@ void main() {
 
 	// COLOR
 	vColor = getColor();
+
+	//gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+	//gl_Position = vec4(position.xzy / 1000.0, 1.0 );
+
+	//gl_PointSize = 5.0;
+	//vColor = vec3(1.0, 1.0, 1.0);
+
+	// only for "replacing" approaches
+	// if(getLOD() != uLevel){
+	// 	gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+	// }
 
 
 	#if defined hq_depth_pass
@@ -887,13 +969,6 @@ void main() {
 				vColor = vColor * visibility + vColor * uShadowColor * (1.0 - visibility);
 			}
 
-			{ // debug
-				vec4 depthMapValue = texture2D(uShadowMap[i], vec2(u, v) + sampleLocations[0]);
-
-				float t = depthMapValue.x * 20.0;
-				vColor = vec3(t, t, t);
-
-			}
 
 		}
 
